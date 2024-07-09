@@ -1,3 +1,4 @@
+import socket
 import pika
 import time
 import logging
@@ -5,7 +6,7 @@ import json
 from config import RABBITMQ_PORT, RABBITMQ_QUEUE, RABBITMQ_HOST
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("Consumer")
 
 
 class RabbitMQConsumer:
@@ -46,18 +47,25 @@ class RabbitMQConsumer:
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def start_consuming(self):
-        try:
-            self.connect()
-            self.setup_channel()
+        while True:
+            try:
+                self.connect()
+                self.setup_channel()
 
-            logger.info("Waiting for messages. Press CTRL+C to exit.")
-            self.channel.start_consuming()
-        except KeyboardInterrupt:
-            logger.info("Consumer interrupted")
-        except Exception as e:
-            logger.error(f"Error in start_consuming: {e}")
-        finally:
-            self.close_connection()
+                logger.info("Waiting for messages. Press CTRL+C to exit.")
+                self.channel.start_consuming()
+            except (
+                pika.exceptions.AMQPConnectionError,
+                pika.exceptions.StreamLostError,
+                socket.gaierror,
+            ) as e:
+                logger.error(f"Connection lost: {e}")
+                time.sleep(5)  # Wait before attempting to reconnect
+            except Exception as e:
+                logger.error(f"Error in start_consuming: {e}")
+                break  # Exit on unexpected exceptions
+            finally:
+                self.close_connection()
 
     def close_connection(self):
         if self.connection and self.connection.is_open:

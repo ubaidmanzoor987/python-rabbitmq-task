@@ -1,4 +1,5 @@
 import json
+import socket
 import pika
 import uuid
 import time
@@ -13,7 +14,7 @@ from config import (
 )
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("Producer")
 
 
 class RabbitMQManager:
@@ -24,8 +25,7 @@ class RabbitMQManager:
         self.connection = None
         self.channel = None
 
-    def connect(self):
-        attempts = 5
+    def connect(self, attempts=5):
         delay = 5
         for attempt in range(1, attempts + 1):
             try:
@@ -36,7 +36,11 @@ class RabbitMQManager:
                 self.channel.queue_declare(queue=self.queue, durable=True)
                 logger.info("Connected to RabbitMQ successfully")
                 return True
-            except pika.exceptions.AMQPConnectionError as e:
+            except (
+                pika.exceptions.AMQPConnectionError,
+                pika.exceptions.StreamLostError,
+                socket.gaierror,
+            ) as e:
                 logger.warning(f"Connection attempt {attempt}/{attempts} failed: {e}")
                 time.sleep(delay)
         logger.error("Failed to connect to RabbitMQ after several attempts")
@@ -58,6 +62,7 @@ class RabbitMQManager:
             logger.info("Message sent successfully")
         except (pika.exceptions.AMQPError, IOError) as e:
             logger.error(f"Failed to publish message: {e}")
+            self.connect(attempts=100)
 
     def close_connection(self):
         if self.connection and self.connection.is_open:

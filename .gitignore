@@ -2,7 +2,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.vscode/
 .idea/
 # Compiled Python files
 *.pyc
@@ -15,3 +14,6 @@ celerybeat.pid
 # Environments
 .env
 venv/
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
