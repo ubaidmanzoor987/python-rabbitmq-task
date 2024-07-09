@@ -1,0 +1,38 @@
+version: '3'
+services:
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    ports:
+      - 5672:5672
+      - 15672:15672
+    env_file:
+      - .env
+    networks:
+      - rabbitmq_network
+
+  producer:
+    build:
+      context: ./producer
+      dockerfile: Dockerfile
+    env_file:
+      .env
+    depends_on:
+      - rabbitmq
+    networks:
+      - rabbitmq_network
+
+  consumer:
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
+    env_file:
+      .env
+    depends_on:
+      - rabbitmq
+    networks:
+      - rabbitmq_network
+
+
+networks:
+  rabbitmq_network:
+    driver: bridge
